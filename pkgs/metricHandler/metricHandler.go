@@ -44,7 +44,7 @@ func newGauge(config *configParse.MetricConfig) {
 }
 
 func cmdRun(cmd string) float64 {
-	cmdObj := exec.Command("/bin/bash", "-c", cmd)
+	cmdObj := exec.Command("sh", "-c", cmd)
 
 	output, err := cmdObj.Output()
 	if err != nil {
