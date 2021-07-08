@@ -67,3 +67,104 @@ CMD ["./shell-exporter","--metricConfigFile=/shell-exporter/conf/config.ini", "-
 ```shell
 docker run -d --name test-shell-exporter -v /tmp/dockerfiles/shell-exporter/examples/conf:/shell-exporter/conf -v /tmp/dockerfiles/shell-exporter/examples/scripts:/shell-exporter/scripts/ ninuxer/shell-exporter:v1.0
 ```
+
+## k8s配置参考(集成prometheus)
+> 注意：本例中使用configmap挂载配置文件，使用hostpath挂载脚本文件到pod中，实际使用时，请根据自身场景做对应变更
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: shell-exporter-config
+  namespace: monitoring
+data:
+  config.ini: |
+    [test_shell_exporter1]
+    script=/shell-exporter/scripts/a.sh 11 22
+
+    [test_shell_exporter2]
+    script=ls /tmp|wc -l
+    labels={"label1": "aaa", "label2": "222"}
+    metricType=counter
+    metricHelp="my test help info"
+    metricInterval=60
+
+    [test_random_num]
+    script=/shell-exporter/scripts/test-scripts
+    labels={"type": "golang", "use": "randInt"}
+    metricHelp="random int from 0 to 100"
+    metricInterval=30
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  namespace: monitoring
+  name: shell-exporter
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: shell-exporter
+    spec:
+      nodeSelector:
+        shell-exporter: "true"
+      containers:
+      - name: shell-exporter
+        image: ninuxer/shell-exporter:v1.0
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 100m
+            memory: 100Mi
+          limits:
+            cpu: 1
+            memory: 512Mi
+        ports:
+        - containerPort: 9527
+          name: metrics
+        volumeMounts:
+        - name: scripts
+          mountPath: /shell-exporter/scripts
+        - name: shell-exporter-config
+          mountPath: /shell-exporter/conf
+      volumes:
+      - name: scripts
+        hostPath:
+          path: /data/shell-exporter/scripts
+          type: Directory
+      - name: shell-exporter-config
+        configMap:
+          name: shell-exporter-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: monitoring
+  name: shell-exporter
+  labels:
+    app: shell-exporter
+spec:
+  selector:
+    app: shell-exporter
+  type: ClusterIP
+  ports:
+  - name: metrics
+    protocol: TCP
+    port: 9527
+    targetPort: 9527
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    app: shell-exporter
+  name: shell-exporter
+  namespace: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: shell-exporter
+  endpoints:
+  - port: metrics
+    interval: 60s
+```
