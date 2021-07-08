@@ -1,8 +1,8 @@
 ## 功能说明
-1、将shell脚本执行结果输出为prometheus exporter，以供prometheus进行采集并监控
-2、如果脚本执行失败，则metric默认值为-999
-3、支持附加label信息
-4、输出指标类型默认为gauge，支持gauge、counter
+- 1、将shell脚本执行结果输出为prometheus exporter，以供prometheus进行采集并监控
+- 2、如果脚本执行失败，则metric默认值为-999
+- 3、支持附加label信息
+- 4、输出指标类型默认为gauge，支持gauge、counter
     - gauge的计算逻辑为取脚本的执行结果(标准输出)作为其值
     - counter的计算逻辑为取脚本的执行结果(标准输出)作为值，进行累加
 
