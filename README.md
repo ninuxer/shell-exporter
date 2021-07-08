@@ -47,3 +47,24 @@ go build
 
 运行: ./shell-exporter --metricConfigFile=./config.ini --listenPort=9527 --defaultMetric=false 
 ```
+
+## Docker镜像
+- Dockerfile(先下载编译好的shell-exporter，或自己手动编译后使用)
+> 注意：如果使用自己编译的版本(在CentOS或Ubuntu系统上编译)，使用动态链接方式编译了一个使用了 GLIBC 库的程序生成的二进制，但是 alpine 镜像中没有 GLIBC 库而是用的 MUSL LIBC 库，这样就会导致该二进制文件无法被执行，可以在编译时，加上CGO_ENABLED=0进行编译，或在alpine中编译一个依赖MUSL LIBC的版本后使用
+```dockerfile
+FROM alpine:3.14
+WORKDIR /shell-exporter
+RUN sed -i s@dl-cdn.alpinelinux.org@mirrors.aliyun.com@ /etc/apk/repositories && \
+    apk add mysql-client curl iproute2 tzdata --no-cache && \
+    cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
+    echo "Asia/Shanghai" > /etc/timezone
+ENV TZ Asia/Shanghai
+COPY ./shell-exporter .
+CMD ["./shell-exporter","--metricConfigFile=/shell-exporter/conf/config.ini", "--listenPort=9527", "--defaultMetric=false"]
+```
+
+- Docker方式启动(注意：将配置和脚本挂载进容器。自己使用时，注意脚本内容是否在容器内可正常执行)
+```shell
+docker run -d --name test-shell-exporter -v /tmp/dockerfiles/shell-exporter/examples/conf:/shell-exporter/conf -v /tmp/dockerfiles/shell-exporter/examples/scripts:/shell-exporter/scripts/ ninuxer/shell-exporter:v1.0
+```
+
